@@ -41,8 +41,6 @@ func New(m uint64, k uint64) *BloomFilter {
 }
 
 // BloomFilter implements a Bloom filter.
-//
-// It is not safe for concurrent use by multiple goroutines.
 type BloomFilter struct {
 	k            uint64
 	bitset       *bitset.BitSet

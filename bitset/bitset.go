@@ -4,8 +4,6 @@ package bitset
 import "math/bits"
 
 // BitSet implements a bitset.
-//
-// A BitSet is not safe for concurrent use by multiple goroutines.
 type BitSet struct {
 	s    []uint64
 	size uint64
