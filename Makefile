@@ -6,8 +6,7 @@ help: ## Display this help screen
 test: ## Run tests
 	@go test -race -shuffle=on ./...
 
-
 .PHONY: test/cover
 test/cover: ## Run tests with coverage
-	go test -race -shuffle=on -coverprofile=/tmp/cover.out ./...
-	go tool cover -html=/tmp/cover.out
+	@go test -race -shuffle=on -coverprofile=/tmp/cover.out ./...
+	@go tool cover -html=/tmp/cover.out
