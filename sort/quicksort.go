@@ -13,7 +13,7 @@ func QuickSort[S ~[]E, E cmp.Ordered](s S) {
 		return
 	}
 	pivot := s[rand.IntN(len(s))]
-	i, j := partition.Partition3Way(s, pivot)
+	i, j := partition.ThreeWay(s, pivot)
 	QuickSort(s[:i])
 	QuickSort(s[j:])
 }
