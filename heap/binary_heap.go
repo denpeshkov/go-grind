@@ -49,20 +49,20 @@ func (h *BinaryHeap[T]) Push(v T) Handle[T] {
 }
 
 // Peek returns the max element without removing it.
-func (h *BinaryHeap[T]) Peek() (v T, ok bool) {
+func (h *BinaryHeap[T]) Peek() T {
 	if len(h.s) == 0 {
-		return v, false
+		panic("heap: heap is empty")
 	}
-	return h.s[0].value, true
+	return h.s[0].value
 }
 
 // Pop removes and returns the max element.
 // The [Handle] of the returned element is invalidated.
-func (h *BinaryHeap[T]) Pop() (v T, ok bool) {
+func (h *BinaryHeap[T]) Pop() T {
 	if len(h.s) == 0 {
-		return v, false
+		panic("heap: heap is empty")
 	}
-	return h.removeAt(0), true
+	return h.removeAt(0)
 }
 
 // Update replaces the value of the element identified by handle.
@@ -105,9 +105,8 @@ func (h *BinaryHeap[T]) All() iter.Seq[T] {
 			vals[i] = it.value
 		}
 		tmp := New(vals, h.less)
-		for {
-			v, ok := tmp.Pop()
-			if !ok || !yield(v) {
+		for tmp.Len() > 0 {
+			if !yield(tmp.Pop()) {
 				return
 			}
 		}

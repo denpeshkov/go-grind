@@ -25,25 +25,12 @@ func checkHeap[T any](t *testing.T, h *BinaryHeap[T]) {
 	}
 }
 
-// drain pops every element, returning them in Pop order.
-func drain[T any](h *BinaryHeap[T]) []T {
-	var out []T
-	for {
-		v, ok := h.Pop()
-		if !ok {
-			return out
-		}
-		out = append(out, v)
-	}
-}
-
 func TestBinaryHeap(t *testing.T) {
 	h := New([]int(nil), cmp.Less)
 
 	assertPopAndSize := func(want, n int) {
 		t.Helper()
-		got, ok := h.Pop()
-		be.True(t, ok)
+		got := h.Pop()
 		be.Equal(t, got, want)
 		be.Equal(t, h.Len(), n)
 		checkHeap(t, h)
@@ -86,17 +73,12 @@ func TestBinaryHeap(t *testing.T) {
 
 func TestBinaryHeap_Empty(t *testing.T) {
 	h := New([]int(nil), cmp.Less)
-	_, ok := h.Peek()
-	be.True(t, !ok)
-	_, ok = h.Pop()
-	be.True(t, !ok)
 	be.Equal(t, h.Len(), 0)
 }
 
 func TestBinaryHeap_Peek(t *testing.T) {
 	h := New([]int{3, 1, 2}, cmp.Less)
-	v, ok := h.Peek()
-	be.True(t, ok)
+	v := h.Peek()
 	be.Equal(t, v, 3)
 	be.Equal(t, h.Len(), 3) // Peek does not remove.
 	checkHeap(t, h)
@@ -114,7 +96,7 @@ func TestBinaryHeap_Remove(t *testing.T) {
 	be.Equal(t, h.Len(), 6)
 	checkHeap(t, h)
 
-	be.Equal(t, drain(h), []int{9, 7, 5, 3, 2, 1})
+	be.Equal(t, slices.Collect(h.All()), []int{9, 7, 5, 3, 2, 1})
 }
 
 func TestBinaryHeap_Update(t *testing.T) {
@@ -126,13 +108,13 @@ func TestBinaryHeap_Update(t *testing.T) {
 
 	h.Update(hs[3], 20) // increase: becomes the new max
 	checkHeap(t, h)
-	v, _ := h.Peek()
+	v := h.Peek()
 	be.Equal(t, v, 20)
 
 	h.Update(hs[8], 0) // decrease: sinks to the bottom
 	checkHeap(t, h)
 
-	be.Equal(t, drain(h), []int{20, 5, 1, 0})
+	be.Equal(t, slices.Collect(h.All()), []int{20, 5, 1, 0})
 }
 
 // TestBinaryHeap_HandleStability is the core regression test for the handle
@@ -192,7 +174,7 @@ func TestBinaryHeap_Merge(t *testing.T) {
 	a.Update(three, 100)
 	checkHeap(t, a)
 
-	be.Equal(t, drain(a), []int{100, 8, 7, 5, 2, 1})
+	be.Equal(t, slices.Collect(a.All()), []int{100, 8, 7, 5, 2, 1})
 }
 
 func TestBinaryHeap_All(t *testing.T) {
@@ -210,7 +192,7 @@ func TestBinaryHeap_All(t *testing.T) {
 func TestBinaryHeap_MinHeap(t *testing.T) {
 	// A reversed less turns it into a min-heap.
 	h := New([]int{5, 3, 8, 1}, func(a, b int) bool { return cmp.Less(b, a) })
-	be.Equal(t, drain(h), []int{1, 3, 5, 8})
+	be.Equal(t, slices.Collect(h.All()), []int{1, 3, 5, 8})
 }
 
 func TestBinaryHeap_NaN(t *testing.T) {
@@ -219,7 +201,7 @@ func TestBinaryHeap_NaN(t *testing.T) {
 	nan := math.NaN()
 	h := New([]float64{nan, 1, 5, nan, 3}, cmp.Less)
 	checkHeap(t, h)
-	v, _ := h.Peek()
+	v := h.Peek()
 	be.Equal(t, v, 5.0)
 }
 
@@ -240,6 +222,6 @@ func TestBinaryHeap_Random(t *testing.T) {
 			checkHeap(t, h)
 		}
 		slices.SortFunc(want, func(a, b int) int { return cmp.Compare(b, a) }) // descending
-		be.Equal(t, drain(h), want)
+		be.Equal(t, slices.Collect(h.All()), want)
 	}
 }
