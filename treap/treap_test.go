@@ -3,6 +3,7 @@ package treap
 
 import (
 	"iter"
+	"maps"
 	"math/rand"
 	"slices"
 	"testing"
@@ -230,6 +231,93 @@ func TestEmpty(t *testing.T) {
 	be.Equal(t, tr.Ceil(5), nil)
 	be.Equal(t, count(tr), 0)
 	be.Equal(t, len(collectKeys(tr.Range(0, 100))), 0)
+}
+
+func TestLen(t *testing.T) {
+	for n := range 11 {
+		tr := &Treap[int, int]{}
+		permute(tr, n)
+		be.Equal(t, tr.Len(), n)
+	}
+
+	tr := &Treap[int, int]{}
+	be.Equal(t, tr.Len(), 0) // empty
+
+	tr.Set(1, 1)
+	tr.Set(1, 2) // overwrite: length unchanged
+	be.Equal(t, tr.Len(), 1)
+
+	tr.Delete(99) // absent: length unchanged
+	be.Equal(t, tr.Len(), 1)
+	tr.Delete(1)
+	be.Equal(t, tr.Len(), 0)
+}
+
+func TestRank(t *testing.T) {
+	for n := range 11 {
+		tr := &Treap[int, int]{}
+		permute(tr, n) // keys 1, 3, …, 2n-1
+
+		be.Equal(t, tr.Rank(-1), 0)  // below all
+		be.Equal(t, tr.Rank(2*n), n) // above all
+		for i := range n {
+			k := 2*i + 1
+			be.Equal(t, tr.Rank(k), i)   // present key
+			be.Equal(t, tr.Rank(k-1), i) // absent even key just below it
+		}
+	}
+}
+
+func TestNth(t *testing.T) {
+	for n := range 11 {
+		tr := &Treap[int, int]{}
+		permute(tr, n) // keys 1, 3, …, 2n-1
+
+		be.Equal(t, tr.Nth(-1), nil) // out of range low
+		be.Equal(t, tr.Nth(n), nil)  // out of range high
+		for i := range n {
+			node := tr.Nth(i)
+			be.True(t, node != nil)
+			be.Equal(t, node.key, 2*i+1)
+			be.Equal(t, tr.Rank(node.key), i) // Nth and Rank are inverses
+		}
+	}
+}
+
+// checkSizes asserts the cached sz of every node matches its recomputed
+// subtree size, returning the true size of n's subtree.
+func checkSizes(t *testing.T, n *Node[int, int]) int {
+	t.Helper()
+	if n == nil {
+		return 0
+	}
+	sz := 1 + checkSizes(t, n.left) + checkSizes(t, n.right)
+	be.Equal(t, n.sz, sz)
+	return sz
+}
+
+func TestSize_Consistency(t *testing.T) {
+	tr := &Treap[int, int]{}
+	present := map[int]bool{}
+	for range 3000 {
+		k := rand.Intn(64)
+		if rand.Intn(3) == 0 {
+			tr.Delete(k)
+			delete(present, k)
+		} else {
+			tr.Set(k, k)
+			present[k] = true
+		}
+
+		be.Equal(t, checkSizes(t, tr.root), len(present))
+		be.Equal(t, tr.Len(), len(present))
+
+		keys := slices.Sorted(maps.Keys(present))
+		for i, k := range keys {
+			be.Equal(t, tr.Rank(k), i)
+			be.Equal(t, tr.Nth(i).key, k)
+		}
+	}
 }
 
 func TestDuplicate(t *testing.T) {

@@ -20,7 +20,7 @@ func (t *Treap[K, V]) Set(key K, val V) {
 	if x != nil {
 		x.val = val
 	} else {
-		x = &Node[K, V]{key: key, val: val, priority: rand.Int()}
+		x = &Node[K, V]{key: key, val: val, priority: rand.Int(), sz: 1}
 	}
 	t.root = merge(l, merge(x, r))
 }
@@ -57,6 +57,21 @@ func (t *Treap[K, V]) Floor(key K) *Node[K, V] {
 	return t.root.floor(key)
 }
 
+// Len returns the number of elements in the treap.
+func (t *Treap[K, V]) Len() int {
+	return t.root.size()
+}
+
+// Rank returns the number of keys < key.
+func (t *Treap[K, V]) Rank(key K) int {
+	return t.root.rank(key)
+}
+
+// Nth returns the node at the given rank.
+func (t *Treap[K, V]) Nth(rank int) *Node[K, V] {
+	return t.root.nth(rank)
+}
+
 // All returns all nodes, in ascending key order.
 func (t *Treap[K, V]) All() iter.Seq[*Node[K, V]] {
 	return func(yield func(*Node[K, V]) bool) {
@@ -77,6 +92,7 @@ type Node[K cmp.Ordered, V any] struct {
 	val         V
 	priority    int
 	left, right *Node[K, V]
+	sz          int // Size of the subtree.
 }
 
 // Key returns the node's key.
@@ -130,6 +146,34 @@ func (n *Node[K, V]) floor(key K) *Node[K, V] {
 	}
 }
 
+func (n *Node[K, V]) rank(key K) int {
+	if n == nil {
+		return 0
+	}
+	switch c := cmp.Compare(key, n.key); {
+	case c == 0:
+		return n.left.size()
+	case c < 0:
+		return n.left.rank(key)
+	default:
+		return 1 + n.left.size() + n.right.rank(key)
+	}
+}
+
+func (n *Node[K, V]) nth(rank int) *Node[K, V] {
+	if n == nil {
+		return nil
+	}
+	switch ls := n.left.size(); {
+	case rank == ls:
+		return n
+	case rank < ls:
+		return n.left.nth(rank)
+	default:
+		return n.right.nth(rank - ls - 1)
+	}
+}
+
 func (n *Node[K, V]) ceil(key K) *Node[K, V] {
 	if n == nil {
 		return nil
@@ -169,6 +213,17 @@ func (n *Node[K, V]) pushRange(yield func(*Node[K, V]) bool, lo, hi K) bool {
 	}
 }
 
+func (n *Node[K, V]) update() {
+	n.sz = 1 + n.left.size() + n.right.size()
+}
+
+func (n *Node[K, V]) size() int {
+	if n == nil {
+		return 0
+	}
+	return n.sz
+}
+
 // merge combines two treaps into one.
 //
 // It requires that every key in l is less than every key in r.
@@ -182,9 +237,11 @@ func merge[K cmp.Ordered, V any](l, r *Node[K, V]) *Node[K, V] {
 	// The node with the higher priority becomes the root.
 	if l.priority >= r.priority {
 		l.right = merge(l.right, r)
+		l.update()
 		return l
 	}
 	r.left = merge(l, r.left)
+	r.update()
 	return r
 }
 
@@ -200,14 +257,17 @@ func split[K cmp.Ordered, V any](t *Node[K, V], key K) (l, x, r *Node[K, V]) {
 	case c < 0:
 		rl, x, rr := split(t.right, key)
 		t.right = rl
+		t.update()
 		return t, x, rr
 	case c > 0:
 		ll, x, lr := split(t.left, key)
 		t.left = lr
+		t.update()
 		return ll, x, t
 	default:
 		l, r := t.left, t.right
 		t.left, t.right = nil, nil
+		t.update()
 		return l, t, r
 	}
 }
